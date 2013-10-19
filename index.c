@@ -11,7 +11,7 @@
 #include "index.h"
 #include "tokenizeralphanum.c"
 
-
+#include "hash_functs.h"
 
 
 /*Traverse and index one file*/
@@ -20,10 +20,72 @@ int traverseFile() {
 	
 }
 
-int addStringToHash(char *filename, char *string) {
+void destroyWordList(WordHashNode wordList) {
+	WordHashNode w;
 	
+	for(w = wordList; w != NULL; w=w->hh.next) {
+		free (w->word);
+		
+		SortedListIteratorPtr iter;
+		iter = SLCreateIterator(w->files);
+		void *obj = NULL;
+		while ((obj = SLNextItem(iter))) {
+			free(obj->filename);
+		}
+		
+		SLDestroyIterator(iter);		
+		
+	}
+
+
+}
+
+
+void add_word(WordHashNode wordList, char *filename, char *word) {
+	WordHashNode w;
+	FileWithCount file;
+	file = malloc( sizeof(FileWithCount) );
+	file->filename = (char *) malloc( sizeof(BUFSIZ+1) );
+	strncat(file->filename,filename,BUFSIZ);
+	file->count = 1;
 	
+	HASH_FIND_STR( wordList, word, w);
 	
+	if (w != NULL) { 				/*Word already exists*/
+		SortedListIteratorPtr iter;
+		iter = SLCreateIterator(w->files);
+		void *obj = NULL;
+		while ((obj = SLNextItem(iter))) {
+			if (compareFilesWithCount(obj, file) == 0) {
+				/*Filename present,
+					just increase count and break*/
+				obj->count++;
+				break;
+			}
+		}
+		SLDestroyIterator(iter);
+		
+		if(obj == NULL) {
+			/*File not found, insert it into list*/
+			SLInsert(w->files, file);	
+			
+		}
+		return;
+	} else {						/*Word doesn't exist yet*/
+		w = malloc( sizeof(WordHashNode) );
+		w->word = (char *) malloc( sizeof(BUFSIZ+1) );
+		w->word[0] = '\0';
+		strncpy(w->word, word, BUFSIZ);
+		
+		w->files = SLCreate(compareFilesWithCount);
+		
+		SLInsert(w->files, file);
+		HASH_ADD_STR(wordList, word, w); /* word: name of key field */
+		return;
+	}
+}
+
+int addStringToHash(char *filename, char *string, WordHashNode wordList) {
 	TokenizerAlphaNumT* tokenizer;
 	tokenizer = TKANCreate(string);
 	if(tokenizer == NULL) {
@@ -34,16 +96,20 @@ int addStringToHash(char *filename, char *string) {
 	char* token = NULL;
 	while((token = TKANGetNextToken(tokenizer)) != NULL) {
 		/*Add to hash here*/
+		add_word(wordList, filename, token);
+		
+		
+		
 		printf("%s", token);
 		free(token);
-	}	
+	}
 	TKANDestroy(tokenizer);
 	
 	return 0;
 }
 
 /*Begin steps to open and index single file*/
-int openAndIndexFile(char *filename) {
+int openAndIndexFile(char *filename, WordHashNode wordList) {
 	FILE *fp;
 	char buf[BUFSIZ+1];
 
@@ -58,7 +124,7 @@ int openAndIndexFile(char *filename) {
 	
 	
 	while( fgets(buf, BUFSIZ+1, fp) ) {
-		addStringToHash(filename, buf);
+		addStringToHash(filename, buf, wordList);
 	}
 	
 	fclose(fp);
@@ -71,7 +137,7 @@ int openAndIndexFile(char *filename) {
 	return 0;
 }
 
-int openAndIndexDirectory(char *dir) {
+int openAndIndexDirectory(char *dir, WordHashNode wordList) {
 	char *directory;
 	directory = (char *) malloc (sizeof(BUFSIZ));
 	directory[0] = '\0';
@@ -110,7 +176,7 @@ int openAndIndexDirectory(char *dir) {
 				strncat(fullPath, parent->fts_path, BUFSIZ - 1);
 				/* strncat(fullPath, parent->fts_name, BUFSIZ - 1); */
 				printf("FILE HERE:%s\n",fullPath);
-				openAndIndexFile(fullPath);
+				openAndIndexFile(fullPath, wordList);
 				break;
 			default:
 				printf("HMM...\n");
@@ -133,7 +199,7 @@ int main(int argc, const char **argv) {
 						"<directory or file name>\n");
 		return 1;
 	}
-	/*Init words hash table*/
+	/*HASH TABLE DECLARATION*/
 	WordHashNode wordList = NULL;
 		
 	/*Check if arg2 is directory or file*/
@@ -144,14 +210,14 @@ int main(int argc, const char **argv) {
 			char *dir;
 			dir = (char *) malloc ( sizeof(BUFSIZ) );
 			dir = strncpy(dir,argv[2],BUFSIZ - 1);
-			openAndIndexDirectory(dir);
+			openAndIndexDirectory(dir, wordList);
 		}
 		else if( s.st_mode & S_IFREG ) {
 			/*File*/
 			char *file;
 			file = (char *) malloc ( sizeof(BUFSIZ) );
 			file = strncpy(file,argv[2],BUFSIZ - 1);			
-			openAndIndexFile(file);
+			openAndIndexFile(file, wordList);
 		}
 		else {
 			/*Don't know what it is*/

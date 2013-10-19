@@ -8,6 +8,12 @@ struct WordHashNode {
 
 }; typedef struct WordHashNode *WordHashNode;
 
+
+struct FileWithCount {
+	char *filename;
+	int count;
+}; typedef struct FileWithCount *FileWithCount;
+
 void addWord();
 void deleteWord();
 WordHashNode findWord();

@@ -1,5 +1,5 @@
 #include "ext/uthash.h"
-
+#include "sl/sorted-list.h"
 struct WordHashNode {
 	char *word;			/*KEY: Word*/
 	SortedListPtr files;		/*VALUE: List of file locations*/

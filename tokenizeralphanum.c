@@ -10,20 +10,8 @@
 #define MAX_OCT_CHARS 3
 
 /*
- * Tokenizer type.  You need to fill in the type as part of your implementation.
- */
-
-struct TokenizerT_ {
-	char* copied_string;
-	char* delimiters;		
-	char* current_position;
-};
-
-typedef struct TokenizerT_ TokenizerT;
-
-
-/*
- * Modified tokenizer type.  Only allows 0-9 A-Z a-z.
+ * Modified tokenizer type.  Only allows ASCII 0-9 A-Z a-z.
+ * CAUTION: Only supports ASCII!
  */
 struct TokenizerAlphaNumT_ {
 	char* copied_string;	
@@ -167,20 +155,20 @@ char* unescape_string(char* string) {
 
 
 /*
- * TKCreate creates a new TokenizerT object for a given set of separator
+ * TKANCreate creates a new TokenizerAlphaNumT object for a given set of separator
  * characters (given as a string) and a token stream (given as a string).
  * 
- * TKCreate should copy the two arguments so that it is not dependent on
+ * TKANCreate should copy the two arguments so that it is not dependent on
  * them staying immutable after returning.  (In the future, this may change
  * to increase efficiency.)
  *
- * If the function succeeds, it returns a non-NULL TokenizerT.
+ * If the function succeeds, it returns a non-NULL TokenizerAlphaNumT.
  * Else it returns NULL.
  *
  * You need to fill in this function as part of your implementation.
  */
 
-TokenizerT *TKCreate(char *separators, char *ts) {
+TokenizerAlphaNumT *TKANCreate(char *ts) {
 	
 	/*
 	 * Description: creates a new tokenizer struct from the token stream and delimiters
@@ -190,17 +178,16 @@ TokenizerT *TKCreate(char *separators, char *ts) {
 	 * 
 	 */
 	 
-	if(separators == NULL || ts == NULL){
+	if(ts == NULL){
 		return NULL;
 	}
 	
-	TokenizerT* tokenizer = (TokenizerT*)malloc(sizeof(TokenizerT));
+	TokenizerAlphaNumT* tokenizer = (TokenizerAlphaNumT*)malloc(sizeof(TokenizerAlphaNumT));
 	
 	if(tokenizer == NULL){
 		return NULL;
 	}
 	
-	tokenizer->delimiters = unescape_string(separators);
 	tokenizer->copied_string = unescape_string(ts);
 	tokenizer->current_position = tokenizer->copied_string;
 	
@@ -208,13 +195,13 @@ TokenizerT *TKCreate(char *separators, char *ts) {
 }
 
 /*
- * TKDestroy destroys a TokenizerT object.  It should free all dynamically
+ * TKANDestroy destroys a TokenizerAlphaNumT object.  It should free all dynamically
  * allocated memory that is part of the object being destroyed.
  *
  * You need to fill in this function as part of your implementation.
  */
 
-void TKDestroy(TokenizerT *tk) {	
+void TKANDestroy(TokenizerAlphaNumT *tk) {	
 	
 	/*
 	 * Description: destroys tokenizer struct and deallocates all memory
@@ -224,14 +211,14 @@ void TKDestroy(TokenizerT *tk) {
 	 */
 	 
 	free(tk->copied_string);
-	free(tk->delimiters);
+
 	free(tk);
 	
 	return;
 }
 
 
-char is_delimiter(char character, char* delimiters) {
+char is_delimiter(char character) {
 	
 	/*
 	 * Description: determines if a particular character is a member of the set of delimiters
@@ -240,19 +227,23 @@ char is_delimiter(char character, char* delimiters) {
 	 * Returns: 1 if character is a delimiter, 0 if it is not
 	 */
 	
-	char* current = NULL;
 	
-	for(current = delimiters; current - delimiters < strlen(delimiters); current++) {
-		if(character == *current) {
-			return 1;
-		}
+	if ( (character >= 48 && character <= 57) ||	/*0-9*/
+		 (character >= 65 && character <= 90) ||	/*A-Z*/
+		 (character >= 97 && character <= 122) ) {	/*a-z*/
+		 
+		 /*Char is not a delimiter*/
+		 return 0;
+		 
 	}
-	return 0;
+	/*Char IS a delimiter*/
+	return 1;
+	
 }
 
 
 /*
- * TKGetNextToken returns the next token from the token stream as a
+ * TKANGetNextToken returns the next token from the token stream as a
  * character string.  Space for the returned token should be dynamically
  * allocated.  The caller is responsible for freeing the space once it is
  * no longer needed.
@@ -263,7 +254,7 @@ char is_delimiter(char character, char* delimiters) {
  * You need to fill in this function as part of your implementation.
  */
 
-char *TKGetNextToken(TokenizerT *tk) {
+char *TKANGetNextToken(TokenizerAlphaNumT *tk) {
 
 	/*
 	 * Description: returns the next token from the token stream specified within the tokenizer
@@ -276,7 +267,7 @@ char *TKGetNextToken(TokenizerT *tk) {
 	char* token_start = NULL;
 
 	while(tk->current_position - tk->copied_string < strlen(tk->copied_string)) {
-		if(!is_delimiter(*tk->current_position, tk->delimiters)) {
+		if(!is_delimiter(*tk->current_position)) {
 		
 			token_start = tk->current_position;
 			break;
@@ -289,7 +280,7 @@ char *TKGetNextToken(TokenizerT *tk) {
 	}
 	
 	while(tk->current_position - tk->copied_string < strlen(tk->copied_string)) {
-		if(is_delimiter(*tk->current_position, tk->delimiters)) {
+		if(is_delimiter(*tk->current_position)) {
 			break;
 		}
 		tk->current_position++;
@@ -317,7 +308,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	
-	TokenizerT* tokenizer = TKCreate(argv[1], argv[2]);
+	TokenizerAlphaNumT* tokenizer = TKANCreate(argv[1], argv[2]);
 	
 	if(tokenizer == NULL) {
 		printf("Error: unable to create tokenizer\n");
@@ -325,12 +316,12 @@ int main(int argc, char **argv) {
 	
 	char* token = NULL;
 	
-	while((token = TKGetNextToken(tokenizer)) != NULL) {
+	while((token = TKANGetNextToken(tokenizer)) != NULL) {
 		printf("%s\n", token);
 		free(token);
 	}
 	
-	TKDestroy(tokenizer);
+	TKANDestroy(tokenizer);
 
 	return 0;
 }

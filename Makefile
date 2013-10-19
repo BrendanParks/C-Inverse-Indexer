@@ -1,4 +1,4 @@
-y86emul : index.c
+index : index.c
 	gcc -g index.c -o index
 test : test.c
 	gcc -Wall -g test.c -o test	

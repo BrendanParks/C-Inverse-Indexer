@@ -9,7 +9,7 @@
 
 #include <fts.h>
 #include "index.h"
-
+#include "tokenizeralphanum.c"
 
 
 
@@ -20,14 +20,54 @@ int traverseFile() {
 	
 }
 
+int addStringToHash(char *filename, char *string) {
+	
+	
+	
+	TokenizerAlphaNumT* tokenizer;
+	tokenizer = TKANCreate(string);
+	if(tokenizer == NULL) {
+		printf("Error: unable to create tokenizer\n");
+		return 1;
+	}
+	
+	char* token = NULL;
+	while((token = TKANGetNextToken(tokenizer)) != NULL) {
+		/*Add to hash here*/
+		printf("%s", token);
+		free(token);
+	}	
+	TKANDestroy(tokenizer);
+	
+	return 0;
+}
+
 /*Begin steps to open and index single file*/
 int openAndIndexFile(char *filename) {
 	FILE *fp;
-	
-	
-	fp = fopen(filename,"r");
-	fclose(fp);
+	char buf[BUFSIZ+1];
 
+	fp = fopen(filename,"r");
+	if(fp == NULL) {
+	printf("OH SHIT OH SHIT\n");
+	   fprintf(stderr, "ERROR: opening file failed.\n");
+	   return 1;
+	}
+	printf("OPENED FILEe: %s\n", filename);
+	
+	
+	
+	while( fgets(buf, BUFSIZ+1, fp) ) {
+		addStringToHash(filename, buf);
+	}
+	
+	fclose(fp);
+	
+	/*Loop through file*/
+	
+	
+	/*Only supports ASCII, could ask for encoding in future,
+	 or maybe check encoding of file in future?*/
 	return 0;
 }
 
@@ -57,31 +97,20 @@ int openAndIndexDirectory(char *dir) {
 	chp = fts_children(ftsp, 0);
 	if (chp == NULL) return 0;
 	
+	char *fullPath;
+	
+	
 	while ((parent = fts_read(ftsp)) != NULL ) {
-		char *fullPath;
+		
 		switch(parent->fts_info) {
-			case FTS_D:
-				
-			/*  child = child->fts_link;
-                printf("%s%s\n", child->fts_path, child->fts_name); */
-				
-				fullPath = (char *) malloc( sizeof(BUFSIZ) );
-				fullPath[0] = '\0';
-				strncat(fullPath, parent->fts_path, BUFSIZ - 1);
-				/* strncat(fullPath, parent->fts_name, BUFSIZ - 1); */
-				printf("DIRECTPORY...%s\n",fullPath);
-				openAndIndexDirectory(fullPath);
-				free (fullPath);
-				break;
 			case FTS_F:
 				
 				fullPath = (char *) malloc( sizeof(BUFSIZ) );
 				fullPath[0] = '\0';
 				strncat(fullPath, parent->fts_path, BUFSIZ - 1);
 				/* strncat(fullPath, parent->fts_name, BUFSIZ - 1); */
-				printf("FIELLLLL.....%s\n",fullPath);
+				printf("FILE HERE:%s\n",fullPath);
 				openAndIndexFile(fullPath);
-				free (fullPath);
 				break;
 			default:
 				printf("HMM...\n");
@@ -91,10 +120,8 @@ int openAndIndexDirectory(char *dir) {
 	
 	fts_close(ftsp);
 	
+	if (fullPath) free (fullPath);
 	return 0;
-	
-	
-
 
 }
 
@@ -133,7 +160,7 @@ int main(int argc, const char **argv) {
 		}
 	}
 	else {
-		fprintf(stderr,"STAT: Unknown fatal error\n");
+		fprintf(stderr,"STAT: Unknown fatal error (Check file/dir name)\n");
 		return EXIT_FAILURE;
 	}
 		

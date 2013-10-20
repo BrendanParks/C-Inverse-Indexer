@@ -20,6 +20,26 @@
  * You need to fill in this function as part of your implementation.
  */
 
+void *SLFind(SortedListPtr list, void *newObj) {
+	SortedListIteratorPtr iterator = NULL;
+	iterator = SLCreateIterator(list);
+
+	ListNode curNode = list->begin;
+	if (list->begin == NULL) return NULL;
+	if ( list->cf(newObj,  curNode->item) == 0) {
+		return curNode->item;
+	}
+	
+	
+	while ( (curNode = curNode->next) ) {
+		if ( list->cf(newObj,  curNode->item) == 0) {
+			return curNode->item;
+		}
+	}
+	
+	return NULL;
+}
+ 
 SortedListPtr SLCreate(CompareFuncT cf){
 	SortedListPtr sl;
 	sl = (SortedListPtr) malloc(sizeof(SortedListPtr));

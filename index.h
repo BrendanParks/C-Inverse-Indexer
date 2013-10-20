@@ -8,11 +8,17 @@ struct WordHashNode {
 
 }; typedef struct WordHashNode *WordHashNode;
 
+struct WordNode {
+	char *word;			/*KEY: Word*/
+	SortedListPtr files;		/*VALUE: List of file locations*/
+}; typedef struct WordNode *WordNode;
 
 struct FileWithCount {
 	char *filename;
 	int count;
 }; typedef struct FileWithCount *FileWithCount;
+
+
 
 void addWord();
 void deleteWord();

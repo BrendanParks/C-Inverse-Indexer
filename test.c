@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
 	names[1] = "betty";
     struct my_struct *tmp, *users = NULL;
     int i=0;
-
+	uint test;
     for (n = names; *n != NULL; n++) {
         s = (struct my_struct*)malloc(sizeof(struct my_struct));
         s->name = *n;

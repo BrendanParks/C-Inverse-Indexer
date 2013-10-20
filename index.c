@@ -16,8 +16,8 @@
 #include "sl/sorted-list.c"
 #include "ext/uthash.h"
 
-/*HASH TABLE DECLARATION*/
-WordHashNode wordList = NULL;
+/*Word list DECLARATION*/
+SortedListPtr wordList;
 
 
 
@@ -27,45 +27,95 @@ int traverseFile() {
 }
 
 void destroyWordList() {
-	WordHashNode w;
 	
-	for(w = wordList; w != NULL; w=w->hh.next) {
-		/*Free word from hash*/
-		free (w->word);
+	
+	SortedListIteratorPtr wordIterator = NULL;
+	wordIterator = SLCreateIterator(wordList);
+	WordNode curWord;
+	
+	SortedListIteratorPtr fileIterator = NULL;
+	FileWithCount curFile;
+	
+	void *obj = NULL;
+	void *objInWord = NULL;
+	
+	while ((obj = SLNextItem(wordIterator))) {
+		curWord = (WordNode) obj;
 		
-		/*Free filenames from sorted list*/
-		SortedListIteratorPtr iter;
-		iter = SLCreateIterator(w->files);
-		void *obj = NULL;
-		while ((obj = SLNextItem(iter))) {
-			FileWithCount objFile;
-			objFile = obj;
+		free (curWord->word);
+		
+		fileIterator = SLCreateIterator(curWord->files);
+		
+		while ((objInWord = SLNextItem(fileIterator))) {		
+			curFile = (FileWithCount) objInWord;
 			
-			free(objFile->filename);
+			free(curFile->filename);
+			
+		
 		}
-		SLDestroyIterator(iter);
-		
-		/*Free sorted list*/
-		SLDestroy(w->files);
-		
-		/*Free word list node*/
-		HASH_DEL(wordList, w);
-		free( w );
-		
+		SLDestroyIterator(fileIterator);
+		SLDestroy(curWord->files);
 	}
-
+	
+	SLDestroyIterator(wordIterator);
+	SLDestroy(wordList);
 
 }
 
 void writeWordListToFile(char *filename) {
+	/*Traverse wordlist, grab each word*/
 
+	FILE *f = fopen(filename, "w");
+	if (f == NULL)
+	{
+		printf("Error opening file!\n");
+		exit(1);
+	}
+
+	/* print some text */
+	const char *text = "Write this to the file";
+	fprintf(f, "Some text: %s\n", text);
+
+
+
+	
+	SortedListIteratorPtr wordIterator = NULL;
+	wordIterator = SLCreateIterator(wordList);
+	WordNode curWord;
+	
+	SortedListIteratorPtr fileIterator = NULL;
+	FileWithCount curFile;
+	
+	void *obj = NULL;
+	void *objInWord = NULL;
+	
+	while ((obj = SLNextItem(wordIterator))) {
+		curWord = (WordNode) obj;
+		
+		fprintf(f,"<list> %s\n",curWord->word);
+		
+		fileIterator = SLCreateIterator(curWord->files);
+		
+		while ((objInWord = SLNextItem(fileIterator))) {		
+			curFile = (FileWithCount) objInWord;
+			
+			fprintf(f,"%s %d ",curFile->filename,curFile->count);
+			
+		
+		}
+		SLDestroyIterator(fileIterator);
+		fprintf(f,"\n</list>\n",curWord->word);
+	}
+	
+	SLDestroyIterator(wordIterator);
+	
+	fclose(f);
 	return;
 
 }
-
+ 
 void add_word(char *filename, char *wordToAdd, char *tokenString) {
-	WordHashNode iterw = NULL;
-	WordHashNode w = NULL;
+
 	FileWithCount file;
 	file = (FileWithCount) malloc( sizeof(FileWithCount) );
 	file->filename = (char *) malloc( BUFSIZ+1 );
@@ -73,17 +123,19 @@ void add_word(char *filename, char *wordToAdd, char *tokenString) {
 	file->count = 1;
 	
 	/*Find if word exists*/
-    for(iterw = wordList; iterw != NULL; iterw = iterw->hh.next) {
-		if (strcmp(iterw->word, wordToAdd) == 0) { /*Word exists*/
-		printf("WORD WORD WROD: %s\n",iterw->word);
-			w = iterw;
-		}
-    }
+	WordNode wordToFind = (WordNode) malloc(sizeof(WordNode));
+	wordToFind->word = (char *) malloc (BUFSIZ+1);
+	strncat(wordToFind->word, wordToAdd, BUFSIZ);
 	
-	if (w != NULL) { 				/*Word already exists*/
+	WordNode isWordThere;
+	isWordThere = (WordNode) SLFind(wordList, wordToFind);
+	
+	
+	if (isWordThere != NULL) { 				/*Word already exists*/
 		printf("WORD EXISTS:  %s\n", wordToAdd);
+		
 		SortedListIteratorPtr iter;
-		iter = SLCreateIterator(w->files);
+		iter = SLCreateIterator(isWordThere->files);
 		void *obj = NULL;
 		while ((obj = SLNextItem(iter))) {
 			FileWithCount objFile;
@@ -100,38 +152,29 @@ void add_word(char *filename, char *wordToAdd, char *tokenString) {
 		
 		if(obj == NULL) {
 		/*File not found, insert it into list*/
-			SLInsert(w->files, file);	
+			SLInsert(isWordThere->files, file);
+			free (wordToFind->word);
+			free (wordToFind);
 			
 		} else {
 			fprintf(stderr, "ERROR: Add Word\n");
 			free (file->filename);
 			free (file);
+			free (wordToFind->word);
+			free (wordToFind);			
 		}
 
 		return;
 	} else {						/*Word doesn't exist yet*/
 
-		w = (WordHashNode) malloc( sizeof(WordHashNode) );
-		w->word = (char *) malloc( BUFSIZ+1 );
-		w->word[0] = '\0';
-		strncpy(w->word, wordToAdd, BUFSIZ);
-		
-		w->files = SLCreate(compareFilesWithCount);
+		wordToFind->files = SLCreate(compareFilesWithCount);
 		/* printf("The word of the day is %s\n", w->word); */
 		
-		SLInsert(w->files, file);
-		printf("STORING WORD: %s\n",w->word);
-		HASH_ADD_KEYPTR(hh, wordList, w->word, strlen(w->word), w); /* word: name of key field */
-		printf("WORD STORED: %s\n",w->word);
-		char *incl = "include";
-		WordHashNode inclNode = NULL;
-		HASH_FIND_STR(wordList, incl, inclNode);
-		if (inclNode) printf("Include token is PRESENT\n");
-		else {
-			fprintf(stderr,"ERROR: FIRST TOKEN NOT WORKING LOL\n");
-			exit(1);
-		
-		}
+		/*Insert file path into word*/
+		SLInsert(wordToFind->files, file);
+		/*Insert word into word list*/
+		SLInsert(wordList, wordToFind);
+
 		return;
 	}
 	
@@ -152,16 +195,14 @@ int addStringToHash(char *filename, char *string) {
 	/* while((token = TKANGetNextToken(tokenizer)) != NULL) {  */
 	
 	while((token = TKANGetNextToken(tokenizer)) != NULL) {
-		printf("Before add_word: %s\n",tokenizer->copied_string);
+
 		/*Add to hash here*/
 		add_word(filename, token, tokenizer->copied_string);
-		printf("After add_word: %s\n",tokenizer->copied_string);	
-		
-		
+
 		/* printf("%s", token); */
 		free(token);
 	}
-	printf("\nDestroying Tokenizer...: %s\n",tokenizer->copied_string);
+	
 	if (tokenizer != NULL) TKANDestroy(tokenizer);
 	
 	return 0;
@@ -259,6 +300,7 @@ int main(int argc, const char **argv) {
 		return 1;
 	}
 
+	wordList = SLCreate(compareWords);
 	/*Check if arg2 is directory or file*/
 	struct stat s;
 	if( stat(argv[2],&s) == 0 ) {
@@ -286,8 +328,10 @@ int main(int argc, const char **argv) {
 		fprintf(stderr,"STAT: Unknown fatal error (Check file/dir name)\n");
 		return EXIT_FAILURE;
 	}
-		
-	FILE *textFile;
+	/*Write inverted index to specified file*/
+	writeWordListToFile(argv[1]);
+	/*Destroy word list*/
+	destroyWordList();
 	
 
 

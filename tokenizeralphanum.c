@@ -189,7 +189,7 @@ TokenizerAlphaNumT *TKANCreate(char *ts) {
 	}
 	
 	tokenizer->copied_string = unescape_string(ts);
-	printf("TOKENIZER MADE: %s\n",tokenizer->copied_string);
+	
 	tokenizer->current_position = tokenizer->copied_string;
 	
 	return tokenizer;
@@ -210,7 +210,7 @@ void TKANDestroy(TokenizerAlphaNumT *tk) {
 	 * Modifies: tokenizer struct: deallocates memory
 	 * Returns: nothing 
 	 */
-	printf("TOKENIZER DELETED: %s\n",tk->copied_string);
+	
 	if (tk->copied_string != NULL) free(tk->copied_string);
 
 	free(tk);
@@ -292,7 +292,7 @@ char *TKANGetNextToken(TokenizerAlphaNumT *tk) {
 	token = (char*)malloc(sizeof(char) * (tk->current_position - token_start + 1));
 	strncpy(token, token_start, tk->current_position - token_start);
 	token[(tk->current_position - token_start)] = '\0';
-	printf("RETURNING TOKEN: %s\n",token);
+
 	return token;
 }
 

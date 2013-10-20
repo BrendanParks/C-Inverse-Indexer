@@ -11,6 +11,8 @@
 
 #include <stdlib.h>
 
+
+
 typedef int (*CompareFuncT)(void *, void *);
 
 struct LN {
@@ -60,7 +62,7 @@ typedef struct SortedListIterator *SortedListIteratorPtr;
  */
 
 
- 
+ void *SLFind(SortedListPtr list, void *obj);
 
 /*
  * SLCreate creates a new, empty sorted list.  The caller must provide

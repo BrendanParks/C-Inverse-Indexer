@@ -16,13 +16,17 @@
 #include "sl/sorted-list.c"
 #include "ext/uthash.h"
 
+/*HASH TABLE DECLARATION*/
+WordHashNode wordList = NULL;
+
+
 
 /*Traverse and index one file*/
 int traverseFile() {
 	return 0;
 }
 
-void destroyWordList(WordHashNode wordList) {
+void destroyWordList() {
 	WordHashNode w;
 	
 	for(w = wordList; w != NULL; w=w->hh.next) {
@@ -53,13 +57,13 @@ void destroyWordList(WordHashNode wordList) {
 
 }
 
-void writeWordListToFile(char *filename, WordHashNode wordList) {
+void writeWordListToFile(char *filename) {
 
 	return;
 
 }
 
-void add_word(WordHashNode wordList, char *filename, char *wordToAdd, char *tokenString) {
+void add_word(char *filename, char *wordToAdd, char *tokenString) {
 	WordHashNode iterw = NULL;
 	WordHashNode w = NULL;
 	FileWithCount file;
@@ -70,13 +74,11 @@ void add_word(WordHashNode wordList, char *filename, char *wordToAdd, char *toke
 	
 	/*Find if word exists*/
     for(iterw = wordList; iterw != NULL; iterw = iterw->hh.next) {
-		printf("WORD WORD WROD: %s\n",iterw->word);
 		if (strcmp(iterw->word, wordToAdd) == 0) { /*Word exists*/
+		printf("WORD WORD WROD: %s\n",iterw->word);
 			w = iterw;
 		}
-    }	
-	
-	HASH_FIND_STR( wordList, "include", w);
+    }
 	
 	if (w != NULL) { 				/*Word already exists*/
 		printf("WORD EXISTS:  %s\n", wordToAdd);
@@ -118,15 +120,24 @@ void add_word(WordHashNode wordList, char *filename, char *wordToAdd, char *toke
 		/* printf("The word of the day is %s\n", w->word); */
 		
 		SLInsert(w->files, file);
-
+		printf("STORING WORD: %s\n",w->word);
 		HASH_ADD_KEYPTR(hh, wordList, w->word, strlen(w->word), w); /* word: name of key field */
-
+		printf("WORD STORED: %s\n",w->word);
+		char *incl = "include";
+		WordHashNode inclNode = NULL;
+		HASH_FIND_STR(wordList, incl, inclNode);
+		if (inclNode) printf("Include token is PRESENT\n");
+		else {
+			fprintf(stderr,"ERROR: FIRST TOKEN NOT WORKING LOL\n");
+			exit(1);
+		
+		}
 		return;
 	}
 	
 }
 
-int addStringToHash(char *filename, char *string, WordHashNode wordList) {
+int addStringToHash(char *filename, char *string) {
 
 	if (string == NULL || filename == NULL) return 1;
 	
@@ -143,7 +154,7 @@ int addStringToHash(char *filename, char *string, WordHashNode wordList) {
 	while((token = TKANGetNextToken(tokenizer)) != NULL) {
 		printf("Before add_word: %s\n",tokenizer->copied_string);
 		/*Add to hash here*/
-		add_word(wordList, filename, token, tokenizer->copied_string);
+		add_word(filename, token, tokenizer->copied_string);
 		printf("After add_word: %s\n",tokenizer->copied_string);	
 		
 		
@@ -157,7 +168,7 @@ int addStringToHash(char *filename, char *string, WordHashNode wordList) {
 }
 
 /*Begin steps to open and index single file*/
-int openAndIndexFile(char *filename, WordHashNode wordList) {
+int openAndIndexFile(char *filename) {
 	FILE *fp;
 	char buf[BUFSIZ+1];
 
@@ -172,7 +183,7 @@ int openAndIndexFile(char *filename, WordHashNode wordList) {
 	
 	
 	while( fgets(buf, BUFSIZ+1, fp) ) {
-		addStringToHash(filename, buf, wordList);
+		addStringToHash(filename, buf);
 	}
 	
 	fclose(fp);
@@ -185,7 +196,7 @@ int openAndIndexFile(char *filename, WordHashNode wordList) {
 	return 0;
 }
 
-int openAndIndexDirectory(char *dir, WordHashNode wordList) {
+int openAndIndexDirectory(char *dir) {
 	char *directory;
 	directory = (char *) malloc (BUFSIZ);
 	directory[0] = '\0';
@@ -224,7 +235,7 @@ int openAndIndexDirectory(char *dir, WordHashNode wordList) {
 				strncat(fullPath, parent->fts_path, BUFSIZ - 1);
 				/* strncat(fullPath, parent->fts_name, BUFSIZ - 1); */
 				printf("FILE HERE:%s\n",fullPath);
-				openAndIndexFile(fullPath, wordList);
+				openAndIndexFile(fullPath);
 				break;
 			default:
 				printf("HMM...\n");
@@ -247,9 +258,7 @@ int main(int argc, const char **argv) {
 						"<directory or file name>\n");
 		return 1;
 	}
-	/*HASH TABLE DECLARATION*/
-	WordHashNode wordList = NULL;
-		
+
 	/*Check if arg2 is directory or file*/
 	struct stat s;
 	if( stat(argv[2],&s) == 0 ) {
@@ -258,14 +267,14 @@ int main(int argc, const char **argv) {
 			char *dir;
 			dir = (char *) malloc ( BUFSIZ );
 			dir = strncpy(dir,argv[2],BUFSIZ - 1);
-			openAndIndexDirectory(dir, wordList);
+			openAndIndexDirectory(dir);
 		}
 		else if( s.st_mode & S_IFREG ) {
 			/*File*/
 			char *file;
 			file = (char *) malloc ( BUFSIZ );
 			file = strncpy(file,argv[2],BUFSIZ - 1);			
-			openAndIndexFile(file, wordList);
+			openAndIndexFile(file);
 		}
 		else {
 			/*Don't know what it is*/

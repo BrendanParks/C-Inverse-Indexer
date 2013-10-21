@@ -14,12 +14,12 @@
 #include "hash_functs.h"
 #include "sl/sorted-list.h"
 #include "sl/sorted-list.c"
-#include "ext/uthash.h"
+
 
 /*Word list DECLARATION*/
 SortedListPtr wordList;
 
-
+#define BUFSIZ 1024
 
 /*Traverse and index one file*/
 int traverseFile() {
@@ -119,13 +119,15 @@ void add_word(char *filename, char *wordToAdd, char *tokenString) {
 	FileWithCount file;
 	file = (FileWithCount) malloc( sizeof(FileWithCount) );
 	file->filename = (char *) malloc( BUFSIZ+1 );
-	strncat(file->filename,filename,BUFSIZ);
+	snprintf(file->filename, BUFSIZ, "%s", filename);
+		
 	file->count = 1;
-	
+	printf("Filename after file %s and should be %s\n",file->filename,filename);
+
 	/*Find if word exists*/
 	WordNode wordToFind = (WordNode) malloc(sizeof(WordNode));
 	wordToFind->word = (char *) malloc (BUFSIZ+1);
-	strncat(wordToFind->word, wordToAdd, BUFSIZ);
+	snprintf(wordToFind->word, BUFSIZ, "%s", wordToAdd);
 	
 	WordNode isWordThere;
 	isWordThere = (WordNode) SLFind(wordList, wordToFind);
@@ -152,7 +154,10 @@ void add_word(char *filename, char *wordToAdd, char *tokenString) {
 		
 		if(obj == NULL) {
 		/*File not found, insert it into list*/
+			printf("Filename before slinsert %s\n",file->filename);
 			SLInsert(isWordThere->files, file);
+			printf("Inserted file %s into word %s\n",file->filename,isWordThere->word);
+			printf("Filename actually %s\n",filename);
 			free (wordToFind->word);
 			free (wordToFind);
 			
@@ -195,8 +200,14 @@ int addStringToHash(char *filename, char *string) {
 	/* while((token = TKANGetNextToken(tokenizer)) != NULL) {  */
 	
 	while((token = TKANGetNextToken(tokenizer)) != NULL) {
-
+		printf("BEFORE LOWER CASE %s\n",token);
+		  int i;
+		  for (i = 0; token[i]; i++)
+		  token[i] = tolower(token[ i ]);		
+		
+		printf("AFTER LOWER CASE %s\n",token);
 		/*Add to hash here*/
+		
 		add_word(filename, token, tokenizer->copied_string);
 
 		/* printf("%s", token); */
@@ -271,9 +282,9 @@ int openAndIndexDirectory(char *dir) {
 		switch(parent->fts_info) {
 			case FTS_F:
 				
-				fullPath = (char *) malloc( BUFSIZ );
-				fullPath[0] = '\0';
-				strncat(fullPath, parent->fts_path, BUFSIZ - 1);
+				fullPath = (char *) malloc( BUFSIZ+1 );
+
+				snprintf(fullPath, BUFSIZ, "%s", parent->fts_path);
 				/* strncat(fullPath, parent->fts_name, BUFSIZ - 1); */
 				printf("FILE HERE:%s\n",fullPath);
 				openAndIndexFile(fullPath);
@@ -299,7 +310,11 @@ int main(int argc, const char **argv) {
 						"<directory or file name>\n");
 		return 1;
 	}
-
+	if (argv[2][0] == ')') {
+			/*Don't allow from root directory*/
+			fprintf(stderr,"ERROR: Indexing from root is disallowed!\n");
+			return EXIT_FAILURE;
+	}
 	wordList = SLCreate(compareWords);
 	/*Check if arg2 is directory or file*/
 	struct stat s;
@@ -308,15 +323,19 @@ int main(int argc, const char **argv) {
 			/*Directory*/
 			char *dir;
 			dir = (char *) malloc ( BUFSIZ );
-			dir = strncpy(dir,argv[2],BUFSIZ - 1);
+			snprintf(dir, BUFSIZ-1, "%s", argv[2]);
+			
 			openAndIndexDirectory(dir);
+			free (dir);
 		}
 		else if( s.st_mode & S_IFREG ) {
 			/*File*/
 			char *file;
 			file = (char *) malloc ( BUFSIZ );
-			file = strncpy(file,argv[2],BUFSIZ - 1);			
+			snprintf(file, BUFSIZ-1, "%s", argv[2]);
+						
 			openAndIndexFile(file);
+			free (file);
 		}
 		else {
 			/*Don't know what it is*/

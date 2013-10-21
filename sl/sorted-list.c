@@ -37,6 +37,7 @@ void *SLFind(SortedListPtr list, void *newObj) {
 		}
 	}
 	
+	SLDestroyIterator(iterator);
 	return NULL;
 }
  
@@ -106,11 +107,11 @@ ListNode NodeCreate(void *newObj, ListNode next){
 
  /*SLInsert_T is a function that should only be called internally by SLInsert.
 	it is used for the recursive cases of insertion.*/
-static int SLInsert_T(SortedListPtr list, ListNode curNode, void *newObj){
+static int SLInsert_T(SortedListPtr list, ListNode prevNode, ListNode curNode, void *newObj){
 	/*If traversed to node that doesn't exist, failure occurs*/
 	if (curNode == NULL) return 0;
 	
-	if ( list->cf(newObj,  curNode->item) < 0) {
+	if ( list->cf(newObj,  curNode->item) > 0) {
 	
 		/*If nowhere else to go, insert at end of list*/
 		if (curNode->next == NULL){
@@ -120,17 +121,17 @@ static int SLInsert_T(SortedListPtr list, ListNode curNode, void *newObj){
 		}
 		
 		/*If new obj is less than current, keep iterating through*/
-		return SLInsert_T(list, curNode->next, newObj);
+		return SLInsert_T(list, curNode, curNode->next, newObj);
 	}
 	
-	/*At this point, new obj is bigger or equal current node's obj, insert after it*/
+	/*At this point, new obj is less than or equal current node's obj, insert before it*/
 	
 	ListNode lnNew = NodeCreate(newObj, curNode->next);
 	
 	/*At this point, it is in list node and pointing to
 	  predecessor's sucessor*/
-	 
-	curNode->next = lnNew;
+	prevNode->next = lnNew;
+	lnNew->next = curNode;
 	
 	/*Now predecessor points to new object's list node,
 	  and new list node points to the predecessor's previous
@@ -150,7 +151,7 @@ int SLInsert(SortedListPtr list, void *newObj){
 		list->begin = lnNew;
 		return 1;
 	
-	} else if ( list->cf(newObj,  curNode->item) > 0) {
+	} else if ( list->cf(newObj,  curNode->item) < 0) {
 		/*New obj is greater than head node, becomes new head node*/
 
 		ListNode lnNew = NodeCreate(newObj, list->begin);
@@ -168,7 +169,7 @@ int SLInsert(SortedListPtr list, void *newObj){
 	
 	} else{
 	
-		return SLInsert_T(list, curNode, newObj);
+		return SLInsert_T(list, list->begin, curNode, newObj);
 	}
 	
 		

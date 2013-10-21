@@ -238,6 +238,8 @@ char is_delimiter(char character) {
 		 
 	}
 	/*Char IS a delimiter*/
+	
+
 	return 1;
 	
 }
@@ -293,6 +295,9 @@ char *TKANGetNextToken(TokenizerAlphaNumT *tk) {
 	strncpy(token, token_start, tk->current_position - token_start);
 	token[(tk->current_position - token_start)] = '\0';
 
+	/*convert token to lower-case*/
+
+	
 	return token;
 }
 
